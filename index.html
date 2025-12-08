@@ -558,7 +558,7 @@
                 
                 <h4 class="text-xl font-bold text-gray-900 mb-4">Technical Architecture</h4>
                 <p class="text-gray-700 mb-4">
-                    Built with a modern tech stack using free-tier cloud services for maximum scalability: GitHub for version control, Vercel for frontend deployment, Supabase for real-time database, and n8n Cloud for workflow automation. Our architecture ingests data from multiple free financial APIs, normalizes it into a unified format, and processes it through specialized analytics engines.
+                    Built with a modern tech stack using cloud services for maximum scalability. Our architecture ingests data from multiple free financial APIs, normalizes it into a unified format, and processes it through specialized analytics engines.
                 </p>
                 
                 <div class="flex flex-wrap gap-4 mt-8">
@@ -956,6 +956,98 @@
                 });
             }
         }
+
+        async function fetchStockData(symbol) {
+  try {
+    // Example using Alpha Vantage via our serverless function
+    const response = await fetch(`/api/alpha-vantage/TIME_SERIES_INTRADAY/${symbol}`);
+    const data = await response.json();
+    
+    if (data.error) {
+      console.warn('API Error:', data.error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return null;
+  }
+}
+
+async function fetchCompanyProfile(symbol) {
+  try {
+    // Example using FMP via our serverless function
+    const response = await fetch(`/api/fmp/profile/${symbol}`);
+    const data = await response.json();
+    
+    if (data.error) {
+      console.warn('API Error:', data.error);
+      return null;
+    }
+    
+    return data.data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return null;
+  }
+}
+
+async function fetchPolygonData(symbol) {
+  try {
+    // Example using Polygon via our serverless function
+    const today = new Date().toISOString().split('T')[0];
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+    
+    const response = await fetch(
+      `/api/polygon/v2/aggs/ticker/${symbol}/range/1/day/${lastWeek}/${today}`
+    );
+    const data = await response.json();
+    
+    if (data.error) {
+      console.warn('API Error:', data.error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return null;
+  }
+}
+
+// Update the handleEarlyAccessSignup function to use our serverless function:
+async function handleEarlyAccessSignup(email) {
+  try {
+    const response = await fetch('/api/supabase/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      if (result.alreadyExists) {
+        showToast('You\'re already on the list!', 'info');
+      } else {
+        showToast('🎉 Success! You\'re on the early access list.', 'success');
+      }
+      return true;
+    } else {
+      showToast(result.message || 'Something went wrong', 'error');
+      return false;
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    showToast('Network error. Please try again.', 'error');
+    return false;
+  }
+}
         
         // Demo market data simulation
         async function simulateMarketData() {
