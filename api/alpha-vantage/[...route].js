@@ -99,3 +99,10 @@ export default async function handler(req, res) {
     });
   }
 }
+
+// For CORS preflight
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
