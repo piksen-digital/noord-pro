@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noord Pro - Unified Trading Intelligence Platform</title>
+    <meta name="description" content="Noord Pro consolidates real-time short monitoring, Level-II pattern detection, and dark pool impact simulation into one enterprise-grade trading platform.">
+    <meta name="keywords" content="stock trading, short interest monitoring, Level II analysis, dark pool tracking, trading tools, market analysis, algorithmic trading">
+    
+    <!-- Updated Favicon using DiceBear API with NP initials -->
+    <link rel="icon" type="image/x-icon" href="https://api.dicebear.com/7.x/initials/svg?seed=NP&background=%231e40af&color=ffffff">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://api.dicebear.com/7.x/initials/svg?seed=NP&background=%231e40af&color=ffffff&size=180">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://api.dicebear.com/7.x/initials/png?seed=NP&background=%231e40af&color=ffffff&size=32">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://api.dicebear.com/7.x/initials/png?seed=NP&background=%231e40af&color=ffffff&size=16">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Supabase Client -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --color-primary: #1e40af;
+            --color-secondary: #7c3aed;
+            --color-accent: #06b6d4;
+            --color-bg-dark: #111827;
+            --color-card: #ffffff;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f8fafc;
+            color: #1f2937;
+            overflow-x: hidden;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #f0f9ff 0%, #fdf4ff 50%, #f0fdfa 100%);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            border-color: #c7d2fe;
+        }
+        
+        .metric-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: width 1s ease-in-out;
+        }
+        
+        .nav-link {
+            position: relative;
+        }
+        
+        .nav-link:after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: white;
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover:after {
+            width: 100%;
+        }
+        
+        .mobile-menu {
+            transition: all 0.3s ease;
+            transform: translateY(-100%);
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .mobile-menu.active {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .shadow-soft {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            background-color: rgba(30, 64, 175, 0.95);
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background-color: #10b981;
+        }
+        
+        .toast.error {
+            background-color: #ef4444;
+        }
+        
+        .toast.info {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="gradient-bg">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Fixed Header -->
+    <header class="sticky-header shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <!-- Logo & Site Name -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="text-2xl font-bold text-blue-700">N</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Noord</h1>
+                        <p class="text-xs text-blue-200">PRO</p>
+                    </div>
+                </div>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#features" class="nav-link text-white font-medium">Features</a>
+                    <a href="#benefits" class="nav-link text-white font-medium">Benefits</a>
+                    <a href="#how-it-works" class="nav-link text-white font-medium">How It Works</a>
+                    <a href="#pricing" class="nav-link text-white font-medium">Pricing</a>
+                    <a href="#faq" class="nav-link text-white font-medium">FAQ</a>
+                </nav>
+                
+                <!-- CTA Button -->
+                <div class="hidden md:block">
+                    <button id="header-cta" class="bg-white text-blue-700 font-semibold px-6 py-2 rounded-lg hover:bg-blue-50 transition-all duration-300 shadow-md">
+                        Get Early Access
+                    </button>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-button" class="md:hidden text-white text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="mobile-menu md:hidden absolute top-full left-0 w-full bg-blue-800 text-white py-6 px-4 shadow-xl">
+            <div class="flex flex-col space-y-6">
+                <a href="#features" class="text-lg font-medium border-b border-blue-700 pb-2">Features</a>
+                <a href="#benefits" class="text-lg font-medium border-b border-blue-700 pb-2">Benefits</a>
+                <a href="#how-it-works" class="text-lg font-medium border-b border-blue-700 pb-2">How It Works</a>
+                <a href="#pricing" class="text-lg font-medium border-b border-blue-700 pb-2">Pricing</a>
+                <a href="#faq" class="text-lg font-medium border-b border-blue-700 pb-2">FAQ</a>
+                <button id="mobile-cta" class="bg-white text-blue-700 font-semibold px-6 py-3 rounded-lg hover:bg-blue-50 transition-all duration-300 mt-4">
+                    Get Early Access
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="py-16 md:py-24">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col lg:flex-row items-center">
+                <div class="lg:w-1/2 mb-12 lg:mb-0">
+                    <div class="inline-flex items-center bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                        <span class="w-2 h-2 bg-blue-600 rounded-full mr-2 pulse"></span> 
+                        Alpha Access Now Available
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                        Trade With <span class="text-blue-700">Institutional Intelligence</span>, Simplified
+                    </h1>
+                    <p class="text-xl text-gray-600 mb-8 max-w-2xl">
+                        Noord Pro unifies real-time short monitoring, Level-II pattern detection, and dark pool impact simulation into one enterprise-grade platform designed for active traders.
+                    </p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <button id="hero-cta" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl">
+                            Start Free Trial
+                        </button>
+                        <button class="border border-blue-700 text-blue-700 hover:bg-blue-50 font-semibold px-8 py-3 rounded-lg transition-all duration-300">
+                            <i class="fas fa-play-circle mr-2"></i> Watch Demo
+                        </button>
+                    </div>
+                    <div class="mt-12">
+                        <p class="text-gray-500 text-sm mb-4">Trusted by traders at</p>
+                        <div class="flex flex-wrap items-center gap-6">
+                            <div class="text-gray-400 font-semibold">TradeStation</div>
+                            <div class="text-gray-400 font-semibold">Fidelity</div>
+                            <div class="text-gray-400 font-semibold">Interactive Brokers</div>
+                            <div class="text-gray-400 font-semibold">TD Ameritrade</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:w-1/2">
+                    <div class="bg-white rounded-2xl shadow-soft overflow-hidden border border-gray-200">
+                        <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-4 flex justify-between items-center">
+                            <div class="text-white font-semibold">Live Dashboard Preview</div>
+                            <div class="flex space-x-2">
+                                <div class="w-3 h-3 bg-red-400 rounded-full"></div>
+                                <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                <div class="w-3 h-3 bg-green-400 rounded-full"></div>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-xl">
+                                    <div class="text-sm text-blue-700 font-medium mb-1">Short Risk Index</div>
+                                    <div class="text-2xl font-bold text-gray-800">87.4</div>
+                                    <div class="text-xs text-gray-500">High Risk</div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-xl">
+                                    <div class="text-sm text-green-700 font-medium mb-1">Level II Pattern</div>
+                                    <div class="text-2xl font-bold text-gray-800">Iceberg</div>
+                                    <div class="text-xs text-gray-500">Detected 30s ago</div>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-xl">
+                                    <div class="text-sm text-purple-700 font-medium mb-1">Dark Pool Impact</div>
+                                    <div class="text-2xl font-bold text-gray-800">-2.3%</div>
+                                    <div class="text-xs text-gray-500">Simulated Price Drop</div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="font-medium text-gray-800">Unified Alert Feed</div>
+                                    <div class="text-xs text-gray-500">Live</div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center p-3 bg-white rounded-lg border-l-4 border-red-500">
+                                        <div class="mr-3 text-red-500"><i class="fas fa-exclamation-triangle"></i></div>
+                                        <div>
+                                            <div class="font-medium">TSLA: Short borrow rate increased 42%</div>
+                                            <div class="text-xs text-gray-500">2 minutes ago</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center p-3 bg-white rounded-lg border-l-4 border-blue-500">
+                                        <div class="mr-3 text-blue-500"><i class="fas fa-chart-line"></i></div>
+                                        <div>
+                                            <div class="font-medium">SPY: Level II shows accumulation pattern</div>
+                                            <div class="text-xs text-gray-500">5 minutes ago</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Three Powerful Tools. One Unified Platform.</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Noord Pro combines specialized trading intelligence into a seamless workflow</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="card-hover bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="feature-icon bg-blue-100 text-blue-700">
+                        <i class="fas fa-shield-alt text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Short-Risk Monitor</h3>
+                    <p class="text-gray-600 mb-6">Real-time cross-venue monitoring of borrow availability, locate failures, and synthetic short creation with squeeze risk scoring.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                            <span>Consolidated borrow rates from 12+ venues</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                            <span>Real-time short interest change detection</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                            <span>Synthetic short creation alerts</span>
+                        </div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Squeeze Risk: TSLA</span>
+                            <span class="text-sm font-bold text-red-600">High</span>
+                        </div>
+                        <div class="metric-bar w-4/5"></div>
+                    </div>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="card-hover bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="feature-icon bg-green-100 text-green-700">
+                        <i class="fas fa-brain text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Level-II Pattern Detector</h3>
+                    <p class="text-gray-600 mb-6">AI-powered order book analysis with natural language explanations of Level II patterns and automated alerts.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
+                            <span>Iceberg, spoofing, and accumulation detection</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
+                            <span>Natural language "what just happened" explanations</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-green-600 rounded-full mr-3"></div>
+                            <span>Discord/Telegram/SMS alert integration</span>
+                        </div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t border-gray-100">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="text-sm font-medium text-gray-700 mb-2">Pattern Detected: Iceberg Order</div>
+                            <p class="text-sm text-gray-600">"Large hidden sell order at $145.20 is suppressing price movement despite buying pressure."</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="card-hover bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="feature-icon bg-purple-100 text-purple-700">
+                        <i class="fas fa-project-diagram text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-4">Dark Pool Impact Mapper</h3>
+                    <p class="text-gray-600 mb-6">Simulate how large dark pool prints will impact lit markets with causal modeling and what-if scenario analysis.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                            <span>Real-time dark print ingestion & tracking</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                            <span>Interactive "what-if" impact simulator</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-purple-600 rounded-full mr-3"></div>
+                            <span>Historical fill correlation analysis</span>
+                        </div>
+                    </div>
+                    <div class="mt-8 pt-6 border-t border-gray-100">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-700">Dark Pool Activity</div>
+                                <div class="text-2xl font-bold text-gray-900">4.2M</div>
+                                <div class="text-xs text-gray-500">shares in last hour</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium text-gray-700">Avg. Impact</div>
+                                <div class="text-2xl font-bold text-red-600">-1.8%</div>
+                                <div class="text-xs text-gray-500">on lit markets</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Groundbreaking Feature -->
+            <div class="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
+                <div class="flex flex-col lg:flex-row items-center">
+                    <div class="lg:w-2/3 mb-8 lg:mb-0">
+                        <div class="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
+                            <i class="fas fa-bolt mr-2"></i> BREAKTHROUGH FEATURE
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-4">Cross-Signal Correlation Engine</h3>
+                        <p class="text-gray-700 mb-6">Our proprietary algorithm identifies relationships between short squeezes, Level II patterns, and dark pool activity to predict market movements before they happen. This is the first platform that connects these three data dimensions in real-time.</p>
+                        <div class="flex items-center text-gray-700">
+                            <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                            <span>Identifies hidden correlations between data sources</span>
+                        </div>
+                    </div>
+                    <div class="lg:w-1/3 flex justify-center">
+                        <div class="relative">
+                            <div class="w-48 h-48 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                                <div class="w-40 h-40 bg-white rounded-full flex items-center justify-center">
+                                    <div class="text-center">
+                                        <div class="text-3xl font-bold text-blue-700">42%</div>
+                                        <div class="text-sm text-gray-600">Prediction Accuracy</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="absolute -top-2 -right-2 w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-white">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section id="benefits" class="py-16">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Why Noord Pro Transforms Trading</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Move from reactive trading to proactive strategy with institutional-grade intelligence</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="flex items-start mb-6">
+                        <div class="mr-4 text-blue-600 text-2xl">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Beat Bi-Monthly Delay</h3>
+                            <p class="text-gray-600">Traditional short interest reports come 14 days late. Get real-time borrow rate changes and locate failures as they happen, not weeks later.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="flex items-start mb-6">
+                        <div class="mr-4 text-green-600 text-2xl">
+                            <i class="fas fa-comment-alt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Understand, Don't Just See</h3>
+                            <p class="text-gray-600">Other platforms show Level II data but don't explain it. Our AI translates complex order book patterns into plain English insights instantly.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="flex items-start mb-6">
+                        <div class="mr-4 text-purple-600 text-2xl">
+                            <i class="fas fa-flask"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Test Before You Trade</h3>
+                            <p class="text-gray-600">Don't guess how dark pool prints will move markets. Simulate the impact with our causal modeling engine before making execution decisions.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl p-8 shadow-soft">
+                    <div class="flex items-start mb-6">
+                        <div class="mr-4 text-red-600 text-2xl">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Connect the Dots</h3>
+                            <p class="text-gray-600">See how short squeezes correlate with dark pool activity and Level II patterns. Our cross-signal engine reveals hidden market relationships.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works / SEO Section -->
+    <section id="how-it-works" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">How Noord Pro Works</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">A technical overview of our platform architecture and capabilities</p>
+            </div>
+            
+            <div class="bg-white rounded-2xl p-8 shadow-soft mb-12">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6">Consolidated Market Intelligence Platform</h3>
+                <p class="text-gray-700 mb-6">
+                    Noord Pro is a unified trading intelligence platform that solves three critical problems for active stock traders: delayed short interest data, opaque Level II order book patterns, and unpredictable dark pool impact. By combining real-time data ingestion from multiple venues with proprietary analytics, we deliver institutional-grade insights to retail and professional traders.
+                </p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-blue-50 p-6 rounded-xl">
+                        <h4 class="font-bold text-gray-900 mb-3">For Active Retail Traders</h4>
+                        <p class="text-gray-700">Identify short squeeze opportunities faster, understand order flow dynamics, and anticipate price movements from dark pool activity.</p>
+                    </div>
+                    <div class="bg-green-50 p-6 rounded-xl">
+                        <h4 class="font-bold text-gray-900 mb-3">For Prop Trading Desks</h4>
+                        <p class="text-gray-700">Monitor cross-venue borrow rates in real-time, detect spoofing patterns automatically, and model execution impact before sending orders.</p>
+                    </div>
+                    <div class="bg-purple-50 p-6 rounded-xl">
+                        <h4 class="font-bold text-gray-900 mb-3">For Hedge Fund Analysts</h4>
+                        <p class="text-gray-700">Track synthetic short creation, receive natural language explanations of market microstructure events, and simulate dark pool impacts.</p>
+                    </div>
+                </div>
+                
+                <h4 class="text-xl font-bold text-gray-900 mb-4">Technical Architecture</h4>
+                <p class="text-gray-700 mb-4">
+                    Built with a modern tech stack using free-tier cloud services for maximum scalability: GitHub for version control, Vercel for frontend deployment, Supabase for real-time database, and n8n Cloud for workflow automation. Our architecture ingests data from multiple free financial APIs, normalizes it into a unified format, and processes it through specialized analytics engines.
+                </p>
+                
+                <div class="flex flex-wrap gap-4 mt-8">
+                    <span class="bg-gray-100 text-gray-800 px-4 py-2 rounded-full text-sm font-medium">Real-time Data Processing</span>
+                    <span class="bg-gray-100 text-gray-800 px-4 py-2 rounded-full text-sm font-medium">Machine Learning Pattern Detection</span>
+                    <span class="bg-gray-100 text-gray-800 px-4 py-2 rounded-full text-sm font-medium">Natural Language Generation</span>
+                    <span class="bg-gray-100 text-gray-800 px-4 py-2 rounded-full text-sm font-medium">Causal Impact Simulation</span>
+                </div>
+            </div>
+            
+            <!-- Integration Section -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-8 text-white">
+                <div class="flex flex-col lg:flex-row items-center">
+                    <div class="lg:w-2/3 mb-8 lg:mb-0">
+                        <h3 class="text-2xl font-bold mb-4">Seamless Integration With Your Workflow</h3>
+                        <p class="text-blue-100 mb-6">Noord Pro connects with your existing trading platforms and tools through API, webhooks, and browser extensions.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-white/20 rounded-lg p-4 text-center">
+                                <i class="fab fa-discord text-2xl mb-2"></i>
+                                <div class="font-medium">Discord</div>
+                            </div>
+                            <div class="bg-white/20 rounded-lg p-4 text-center">
+                                <i class="fab fa-telegram text-2xl mb-2"></i>
+                                <div class="font-medium">Telegram</div>
+                            </div>
+                            <div class="bg-white/20 rounded-lg p-4 text-center">
+                                <i class="fas fa-sms text-2xl mb-2"></i>
+                                <div class="font-medium">SMS</div>
+                            </div>
+                            <div class="bg-white/20 rounded-lg p-4 text-center">
+                                <i class="fas fa-envelope text-2xl mb-2"></i>
+                                <div class="font-medium">Email</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:w-1/3 flex justify-center">
+                        <div class="bg-white/20 rounded-xl p-6">
+                            <div class="text-4xl font-bold mb-2">100+</div>
+                            <div class="text-lg">API Endpoints</div>
+                            <div class="text-sm text-blue-200 mt-2">For custom integration</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-16">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>
+                <p class="text-xl text-gray-600 max-w-3xl mx-auto">Get answers to common questions about Noord Pro</p>
+            </div>
+            
+            <div class="max-w-3xl mx-auto">
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl p-6 shadow-soft">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">How is this different from existing trading platforms?</h3>
+                        <p class="text-gray-700">Noord Pro uniquely combines three specialized tools into one platform: real-time short monitoring, AI-powered Level II pattern explanation, and dark pool impact simulation. While other tools may offer one of these features, no platform connects all three with our cross-signal correlation engine.</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-6 shadow-soft">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">What data sources do you use?</h3>
+                        <p class="text-gray-700">We aggregate data from multiple free financial APIs, including Financial Modeling Prep, Alpha Vantage, and Polygon/Massive for market data, supplemented with proprietary data normalization and enrichment. Our platform is designed to work with free-tier APIs during validation, with plans to integrate premium data feeds as we scale.</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-6 shadow-soft">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Is there a free trial available?</h3>
+                        <p class="text-gray-700">Yes, we offer a 14-day free trial with full access to all platform features. No credit card is required to start your trial. After the trial period, you can choose from our tiered subscription plans based on your needs.</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-6 shadow-soft">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">What trading platforms do you integrate with?</h3>
+                        <p class="text-gray-700">We currently offer browser extensions for major platforms like TradeStation, ThinkOrSwim, and Interactive Brokers. Our API allows integration with custom trading systems, and we provide webhooks for Discord, Telegram, and SMS alerts.</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-6 shadow-soft">
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Do you offer institutional or team plans?</h3>
+                        <p class="text-gray-700">Yes, we offer enterprise plans with additional features like team management, custom API quotas, dedicated support, and SLA guarantees. Contact our sales team for custom pricing based on your organization's needs.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 bg-gradient-to-r from-blue-700 to-purple-800 text-white">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Trading?</h2>
+            <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">Join the alpha program today and get 3 months free when we officially launch.</p>
+            <div class="max-w-md mx-auto">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input id="email-input" type="email" placeholder="Your email address" class="flex-grow px-6 py-3 rounded-lg text-gray-900">
+                    <button id="footer-cta" class="bg-white text-blue-700 font-bold px-8 py-3 rounded-lg hover:bg-blue-50 transition-all duration-300 shadow-lg">
+                        Get Early Access
+                    </button>
+                </div>
+                <p class="text-sm text-blue-200 mt-4">By signing up, you agree to our Terms and Privacy Policy</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                            <span class="text-xl font-bold text-white">N</span>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-bold text-xl">Noord</h3>
+                            <p class="text-blue-300 text-sm">PRO</p>
+                        </div>
+                    </div>
+                    <p class="mb-6">Unified trading intelligence for active traders and institutions.</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter text-xl"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin text-xl"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-github text-xl"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-discord text-xl"></i></a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6">Product</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#features" class="hover:text-white transition-colors">Features</a></li>
+                        <li><a href="#benefits" class="hover:text-white transition-colors">Benefits</a></li>
+                        <li><a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a></li>
+                        <li><a href="#pricing" class="hover:text-white transition-colors">Pricing</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">API Documentation</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6">Company</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="hover:text-white transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Careers</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Press</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="text-white font-bold text-lg mb-6">Legal</h4>
+                    <ul class="space-y-3">
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Cookie Policy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Data Processing</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Disclosures</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-gray-800 text-center">
+                <p>&copy; 2023 Noord Pro. All rights reserved. This site is for educational and demonstration purposes only. Trading involves risk.</p>
+                <p class="mt-2 text-sm">Noord Pro is not a registered investment advisor and does not provide financial advice.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Noord Pro",
+        "description": "Unified trading intelligence platform combining real-time short monitoring, Level II pattern detection, and dark pool impact simulation",
+        "url": "https://noordpro.com",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Free trial available"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "Noord Pro"
+        }
+    }
+    </script>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('active');
+        });
+        
+        // Close mobile menu when clicking a link
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.getElementById('mobile-menu').classList.remove('active');
+            });
+        });
+        
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+        
+        // Update metric bars with random data (simulation)
+        function updateMetrics() {
+            const metricBars = document.querySelectorAll('.metric-bar');
+            metricBars.forEach(bar => {
+                const randomWidth = Math.floor(Math.random() * 30) + 60;
+                bar.style.width = `${randomWidth}%`;
+            });
+        }
+        
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 5000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            
+            // Show toast
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // Hide after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+        
+        // Email validation
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        // Get Supabase credentials from environment
+        // These will be set as environment variables in Vercel
+        const SUPABASE_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:54321' // For local testing
+            : (process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL_HERE');
+            
+        const SUPABASE_ANON_KEY = window.location.hostname === 'localhost'
+            ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' // Demo key
+            : (process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY_HERE');
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Handle early access signup
+        async function handleEarlyAccessSignup(email) {
+            if (!validateEmail(email)) {
+                showToast('Please enter a valid email address', 'error');
+                return false;
+            }
+            
+            try {
+                // Save to Supabase
+                const { data, error } = await supabase
+                    .from('early_access_signups')
+                    .insert([{ 
+                        email: email,
+                        created_at: new Date().toISOString(),
+                        source: window.location.href
+                    }]);
+                
+                if (error) {
+                    if (error.code === '23505') {
+                        showToast('You\'re already on the early access list!', 'info');
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    // Success
+                    showToast('🎉 Success! You\'re on the early access list.', 'success');
+                    
+                    // Optional: Send to n8n webhook (set up separately)
+                    const n8nWebhook = process.env.N8N_WEBHOOK_URL;
+                    if (n8nWebhook) {
+                        fetch(n8nWebhook, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                email, 
+                                timestamp: new Date().toISOString(),
+                                source: 'noord_pro_website'
+                            })
+                        }).catch(console.error);
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.error('Error saving email:', error);
+                showToast('Something went wrong. Please try again.', 'error');
+                return false;
+            }
+        }
+        
+        // Set up CTA button handlers
+        function setupCTAButtons() {
+            // Header CTA
+            const headerCTA = document.getElementById('header-cta');
+            if (headerCTA) {
+                headerCTA.addEventListener('click', async () => {
+                    const email = prompt('Enter your email for early access:');
+                    if (email) {
+                        headerCTA.innerHTML = '<div class="spinner"></div> Processing...';
+                        headerCTA.disabled = true;
+                        await handleEarlyAccessSignup(email);
+                        headerCTA.innerHTML = 'Get Early Access';
+                        headerCTA.disabled = false;
+                    }
+                });
+            }
+            
+            // Hero CTA
+            const heroCTA = document.getElementById('hero-cta');
+            if (heroCTA) {
+                heroCTA.addEventListener('click', async () => {
+                    const email = prompt('Enter your email to start free trial:');
+                    if (email) {
+                        heroCTA.innerHTML = '<div class="spinner"></div> Processing...';
+                        heroCTA.disabled = true;
+                        const success = await handleEarlyAccessSignup(email);
+                        if (success) {
+                            heroCTA.innerHTML = 'Check Your Email!';
+                        } else {
+                            heroCTA.innerHTML = 'Start Free Trial';
+                            heroCTA.disabled = false;
+                        }
+                    }
+                });
+            }
+            
+            // Footer CTA
+            const footerCTA = document.getElementById('footer-cta');
+            const emailInput = document.getElementById('email-input');
+            if (footerCTA && emailInput) {
+                footerCTA.addEventListener('click', async () => {
+                    const email = emailInput.value;
+                    if (email) {
+                        footerCTA.innerHTML = '<div class="spinner"></div> Processing...';
+                        footerCTA.disabled = true;
+                        const success = await handleEarlyAccessSignup(email);
+                        if (success) {
+                            emailInput.value = '';
+                            footerCTA.innerHTML = 'Subscribed!';
+                        } else {
+                            footerCTA.innerHTML = 'Get Early Access';
+                            footerCTA.disabled = false;
+                        }
+                    } else {
+                        showToast('Please enter your email address', 'error');
+                    }
+                });
+                
+                // Allow Enter key in email input
+                emailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        footerCTA.click();
+                    }
+                });
+            }
+            
+            // Mobile CTA
+            const mobileCTA = document.getElementById('mobile-cta');
+            if (mobileCTA) {
+                mobileCTA.addEventListener('click', async () => {
+                    const email = prompt('Enter your email for early access:');
+                    if (email) {
+                        mobileCTA.innerHTML = '<div class="spinner"></div> Processing...';
+                        mobileCTA.disabled = true;
+                        await handleEarlyAccessSignup(email);
+                        mobileCTA.innerHTML = 'Get Early Access';
+                        mobileCTA.disabled = false;
+                    }
+                });
+            }
+        }
+        
+        // Demo market data simulation
+        async function simulateMarketData() {
+            // This is demo data - replace with real API calls in production
+            const mockData = {
+                shortRisk: Math.floor(Math.random() * 30) + 70,
+                level2Pattern: ['Iceberg', 'Spoofing', 'Accumulation'][Math.floor(Math.random() * 3)],
+                darkPoolImpact: (Math.random() * 5 - 2.5).toFixed(1),
+                alerts: [
+                    {
+                        symbol: ['TSLA', 'SPY', 'AAPL', 'NVDA'][Math.floor(Math.random() * 4)],
+                        type: ['short', 'level2', 'darkpool'][Math.floor(Math.random() * 3)],
+                        message: [
+                            'Short borrow rate increased significantly',
+                            'Level II shows accumulation pattern',
+                            'Large dark pool print detected'
+                        ][Math.floor(Math.random() * 3)],
+                        time: `${Math.floor(Math.random() * 10)} minutes ago`
+                    }
+                ]
+            };
+            
+            // Update UI
+            document.querySelectorAll('.metric-bar').forEach(bar => {
+                bar.style.width = `${mockData.shortRisk}%`;
+            });
+            
+            // You can uncomment and use real APIs here:
+            /*
+            try {
+                // Example with Financial Modeling Prep (replace with your key)
+                const fmpResponse = await fetch('/api/fmp/quote/AAPL');
+                const fmpData = await fmpResponse.json();
+                
+                // Example with Alpha Vantage
+                const avResponse = await fetch('/api/av/quote/AAPL');
+                const avData = await avResponse.json();
+                
+                // Update UI with real data
+            } catch (error) {
+                console.log('Using demo data', error);
+            }
+            */
+        }
+        
+        // Initialize everything when DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize metric bars
+            updateMetrics();
+            setInterval(updateMetrics, 5000);
+            
+            // Set up CTA buttons
+            setupCTAButtons();
+            
+            // Start market data simulation
+            simulateMarketData();
+            setInterval(simulateMarketData, 10000);
+            
+            // Add scroll effect to header
+            window.addEventListener('scroll', function() {
+                const header = document.querySelector('header');
+                if (window.scrollY > 100) {
+                    header.classList.add('sticky-header');
+                } else {
+                    header.classList.remove('sticky-header');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
