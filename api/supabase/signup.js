@@ -87,26 +87,18 @@ export default async function handler(req, res) {
       throw error;
     }
 
-    // Optional: Send to n8n webhook if configured
-    const n8nWebhook = process.env.N8N_WEBHOOK_URL;
-    if (n8nWebhook) {
-      try {
-        await fetch(n8nWebhook, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            name,
-            source,
-            timestamp: new Date().toISOString(),
-            type: 'early_access_signup'
-          })
-        });
-      } catch (webhookError) {
-        console.warn('Failed to send to n8n:', webhookError);
-        // Don't fail the request if webhook fails
-      }
-    }
+    // Add this after successful signup:
+if (process.env.RESEND_API_KEY) {
+  // Trigger welcome email
+  await fetch(`${process.env.SUPABASE_URL}/functions/v1/send-welcome-email`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, name })
+  }).catch(err => console.warn('Email failed:', err))
+}
 
     return res.status(200).json({
       success: true,
