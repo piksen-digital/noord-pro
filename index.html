@@ -682,7 +682,7 @@
                         <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin text-xl"></i></a>
                         <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-github text-xl"></i></a>
                         <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-discord text-xl"></i></a>
-                </div>
+                    </div>
                 </div>
                 
                 <div>
@@ -750,6 +750,14 @@
     </script>
 
     <script>
+        // Get Supabase credentials from environment
+        // These should be injected by Vercel
+        const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co'; // Replace with your actual URL
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE'; // Replace with your actual key
+        
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // Mobile menu toggle
         document.getElementById('mobile-menu-button').addEventListener('click', function() {
             const menu = document.getElementById('mobile-menu');
